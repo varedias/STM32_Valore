@@ -1,0 +1,142 @@
+#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+//use intterupt 
+volatile uint8_t State1=0;
+volatile uint8_t State2=0;
+volatile uint8_t State3=0;
+
+void AllInit()
+{
+		RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC|RCC_APB2Periph_GPIOA| RCC_APB2Periph_GPIOD ,ENABLE);
+		RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO,ENABLE);
+	
+	
+		GPIO_EXTILineConfig(GPIO_PortSourceGPIOC|GPIO_PortSourceGPIOA,ENABLE);
+		GPIO_EXTILineConfig(GPIO_PortSourceGPIOA,GPIO_PinSource0);
+		GPIO_EXTILineConfig(GPIO_PortSourceGPIOC, GPIO_PinSource5);  
+    GPIO_EXTILineConfig(GPIO_PortSourceGPIOA, GPIO_PinSource15); 
+	
+		EXTI_InitTypeDef g0;
+		g0.EXTI_Line = EXTI_Line0;
+		g0.EXTI_LineCmd=ENABLE;
+		g0.EXTI_Mode = EXTI_Mode_Interrupt;
+		g0.EXTI_Trigger=EXTI_Trigger_Rising;
+		EXTI_Init(&g0);
+	
+			g0.EXTI_Line = EXTI_Line5;
+		g0.EXTI_Trigger=EXTI_Trigger_Falling;
+		EXTI_Init(&g0);
+	
+	 g0.EXTI_Line=EXTI_Line15;
+	 EXTI_Init(&g0);
+	
+	
+	
+	
+		NVIC_InitTypeDef g1;
+		g1.NVIC_IRQChannel = EXTI0_IRQn;
+		g1.NVIC_IRQChannelPreemptionPriority =1;
+		g1.NVIC_IRQChannelSubPriority= 1;
+		g1.NVIC_IRQChannelCmd = ENABLE;
+		NVIC_Init(&g1);
+	
+	g1.NVIC_IRQChannel = EXTI9_5_IRQn;
+	g1.NVIC_IRQChannelPreemptionPriority =2;
+    NVIC_Init(&g1);
+
+    g1.NVIC_IRQChannel = EXTI15_10_IRQn;
+		g1.NVIC_IRQChannelPreemptionPriority =3;
+    NVIC_Init(&g1);
+	
+
+
+		GPIO_InitTypeDef G;
+		G.GPIO_Mode=GPIO_Mode_Out_PP;
+		G.GPIO_Pin=GPIO_Pin_6;
+		G.GPIO_Speed=GPIO_Speed_50MHz;
+		GPIO_Init(GPIOC,&G);
+	
+	
+    G.GPIO_Pin = GPIO_Pin_5;
+    G.GPIO_Mode = GPIO_Mode_IPU;
+    G.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOC, &G);
+
+  
+    G.GPIO_Mode = GPIO_Mode_IPU;
+    G.GPIO_Pin = GPIO_Pin_15;
+    G.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOA, &G);
+
+    G.GPIO_Pin = GPIO_Pin_0; 
+    G.GPIO_Mode = GPIO_Mode_IPD; 
+    G.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOA, &G);
+		
+		G.GPIO_Pin=GPIO_Pin_8;
+		G.GPIO_Mode=GPIO_Mode_Out_PP;
+		G.GPIO_Speed=GPIO_Speed_50MHz;
+		GPIO_Init(GPIOA,&G);
+		
+		G.GPIO_Pin=GPIO_Pin_2;
+		G.GPIO_Mode=GPIO_Mode_Out_PP;
+		G.GPIO_Speed=GPIO_Speed_50MHz;
+		GPIO_Init(GPIOD,&G);
+
+	
+}
+
+int main(void)
+{
+	AllInit();
+	GPIOA->BSRR=(1<<8);
+	GPIOD->BSRR=(1<<2);
+	while (1)
+	{
+		
+	}
+}
+
+void EXTI0_IRQHandler(void) { 
+    if (EXTI_GetITStatus(EXTI_Line0)!=RESET) {
+        EXTI_ClearITPendingBit(EXTI_Line0);
+        Delay_ms(20); 
+        if (State1 == 0) {
+            GPIOA->BRR = GPIO_Pin_8;  
+            GPIOD->BRR = GPIO_Pin_2;  
+            State1 = 1;
+        } else {
+            GPIOA->BSRR = GPIO_Pin_8; 
+            GPIOD->BSRR = GPIO_Pin_2; 
+            State1 = 0;
+        }
+    }
+}
+
+void EXTI9_5_IRQHandler(void) { 
+    if (EXTI_GetITStatus(EXTI_Line5)!=RESET) {
+        EXTI_ClearITPendingBit(EXTI_Line5);
+        Delay_ms(20);
+        if (State2 == 0) {
+            GPIOA->BRR = GPIO_Pin_8;  
+            State2 = 1;
+        } else {
+            GPIOA->BSRR = GPIO_Pin_8; 
+            State2 = 0;
+        }
+    }
+}
+
+void EXTI15_10_IRQHandler(void) { 
+    if (EXTI_GetITStatus(EXTI_Line15)!=RESET) {
+        EXTI_ClearITPendingBit(EXTI_Line15);
+        Delay_ms(20);
+        if (State3 == 0) {
+            GPIOD->BRR = GPIO_Pin_2;  
+            State3 = 1;
+        } else {
+            GPIOD->BSRR = GPIO_Pin_2;  
+            State3 = 0;
+        }
+    }
+}
