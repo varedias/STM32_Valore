@@ -1,0 +1,126 @@
+#include "stm32f10x.h"  // Device header
+#include <stdio.h>
+#include "Delay.h"
+#define MESSAGE1 "keydown "
+#define MESSAGE2 "keyup "
+
+int state=-1;
+		
+void SendString(USART_TypeDef* USARTx, char *str)
+{
+    while(*str)
+    {
+        USART_SendData(USARTx, *str++);
+        while(USART_GetFlagStatus(USARTx, USART_FLAG_TXE) == RESET);
+    }
+}
+
+
+void AllInit()
+{
+
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA|RCC_APB2Periph_GPIOC | RCC_APB2Periph_USART1, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
+
+    GPIO_InitTypeDef g1;
+    g1.GPIO_Pin = GPIO_Pin_9;           
+    g1.GPIO_Speed = GPIO_Speed_50MHz;
+    g1.GPIO_Mode = GPIO_Mode_AF_PP;      
+    GPIO_Init(GPIOA, &g1);
+
+    g1.GPIO_Pin = GPIO_Pin_10;           
+    g1.GPIO_Mode = GPIO_Mode_IN_FLOATING; 
+    GPIO_Init(GPIOA, &g1);
+	
+		GPIO_InitTypeDef g4;
+	g4.GPIO_Mode=GPIO_Mode_IPD;
+	g4.GPIO_Speed=GPIO_Speed_50MHz;
+	g4.GPIO_Pin=GPIO_Pin_0;
+	GPIO_Init(GPIOA,&g4);
+	
+	g4.GPIO_Mode=GPIO_Mode_IPU;
+	g4.GPIO_Pin=GPIO_Pin_5;
+	GPIO_Init(GPIOC,&g4);
+	
+	g4.GPIO_Mode=GPIO_Mode_IPU;
+	g4.GPIO_Pin=GPIO_Pin_15;
+	GPIO_Init(GPIOA,&g4);
+
+   
+    USART_InitTypeDef g2;
+    USART_StructInit(&g2);              
+    g2.USART_BaudRate = 115200;
+    g2.USART_StopBits = USART_StopBits_1;
+    g2.USART_Parity = USART_Parity_No;
+    g2.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
+    USART_Init(USART1, &g2);
+
+    USART_Cmd(USART1, ENABLE);           
+
+
+    NVIC_InitTypeDef g3;
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2); 
+    g3.NVIC_IRQChannel = USART1_IRQn;
+    g3.NVIC_IRQChannelPreemptionPriority = 3;
+    g3.NVIC_IRQChannelSubPriority = 3;
+    g3.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&g3);
+
+    USART_ITConfig(USART1, USART_IT_RXNE, ENABLE); 
+}
+
+
+int Getstate()
+{
+	if(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_0)==1)
+	{
+		Delay_ms(10);
+		return 1;
+	}
+	if(GPIO_ReadInputDataBit(GPIOC,GPIO_Pin_5)==0)
+	{
+		Delay_ms(10);
+		return 2;
+	}
+	if(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_15)==0)
+	{
+		Delay_ms(10);
+		return 3;
+	}
+	return -1;
+}
+
+
+
+int main(void)
+{
+    AllInit();
+
+
+    while (1)
+    {
+			state=Getstate();
+			    if(state==1)
+			{
+			 SendString(USART1,MESSAGE1);
+				while(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_0)==1);
+				Delay_ms(10);
+				SendString(USART1,MESSAGE2);
+			}
+			if(state==2)
+			{
+				 SendString(USART1,MESSAGE1);
+				while(GPIO_ReadInputDataBit(GPIOC,GPIO_Pin_5)==0);
+				Delay_ms(10);
+					SendString(USART1,MESSAGE2);
+			}
+			if(state==3)
+			{
+			 SendString(USART1,MESSAGE1);
+				while(GPIO_ReadInputDataBit(GPIOA,GPIO_Pin_15)==0);
+				Delay_ms(10);
+				SendString(USART1,MESSAGE2);
+			}
+
+    }
+}
